@@ -18,3 +18,4 @@ helm template telesis-api .
 ```
 
 Paprika should point Applications at this repository with `source.type: git`, `source.revision: main`, and `source.path: "."`.
+Push webhooks to Paprika are expected to trigger immediate sync, with the Application's 60-second poll interval as the fallback.
