@@ -3,7 +3,8 @@ revisionHistoryLimit: 3
 
 nameOverride: ""
 fullnameOverride: ""
-commonLabels: {}
+commonLabels:
+  app.kubernetes.io/part-of: telesis
 
 image:
   repository: australia-southeast1-docker.pkg.dev/uptime-485903/uptime-prod-docker/api
@@ -137,3 +138,236 @@ nodeSelector: {}
 tolerations: []
 affinity: {}
 topologySpreadConstraints: []
+
+components:
+  scheduler:
+    enabled: false
+    replicaCount: 1
+    revisionHistoryLimit: 3
+    image:
+      repository: ghcr.io/skunkworq/uptime/scheduler
+      tag: ""
+      pullPolicy: IfNotPresent
+    containerPort: 8081
+    env:
+      nonSecret:
+        PORT: "8081"
+        SERVICE_NAME: telesis-scheduler
+        GO_ENV: production
+        ENV: production
+        GCP_PROJECT_ID: telesis-prod
+        PUBSUB_TOPIC_ID: check-jobs
+        SCHEDULER_LOCAL_MODE: "true"
+        SCHEDULER_TRIGGER_INTERVAL: 60s
+    secretEnv:
+      existingSecret: ""
+      optional: false
+    extraEnv: []
+    extraEnvFrom: []
+    firebaseAdmin:
+      enabled: true
+      existingSecret: ""
+      key: ""
+      mountPath: ""
+    probes:
+      enabled: true
+      readinessPath: /health
+      livenessPath: /health
+      startupPath: /health
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 6
+    service:
+      enabled: true
+      type: ClusterIP
+      port: 8081
+      annotations: {}
+    resources:
+      requests:
+        cpu: 50m
+        memory: 96Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+    podAnnotations: {}
+    podLabels: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    topologySpreadConstraints: []
+
+  runner:
+    enabled: false
+    replicaCount: 1
+    revisionHistoryLimit: 3
+    image:
+      repository: ghcr.io/skunkworq/uptime/runner
+      tag: ""
+      pullPolicy: IfNotPresent
+    containerPort: 8082
+    env:
+      nonSecret:
+        PORT: "8082"
+        SERVICE_NAME: telesis-runner
+        GO_ENV: production
+        ENV: production
+        GCP_PROJECT_ID: telesis-prod
+        PUBSUB_SUBSCRIPTION_ID: check-jobs-sub
+        PUBSUB_RESULT_TOPIC_ID: check-results
+        PUBSUB_MODE: pull
+        RUNNER_REGION: syd1
+        PLAYWRIGHT_SANDBOX_IMAGE: ghcr.io/skunkworq/uptime/playwright-sandbox:latest
+    secretEnv:
+      existingSecret: ""
+      optional: false
+    extraEnv: []
+    extraEnvFrom: []
+    firebaseAdmin:
+      enabled: true
+      existingSecret: ""
+      key: ""
+      mountPath: ""
+    probes:
+      enabled: true
+      readinessPath: /health/live
+      livenessPath: /health/live
+      startupPath: /health/live
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 6
+    service:
+      enabled: true
+      type: ClusterIP
+      port: 8082
+      annotations: {}
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 1000m
+        memory: 1024Mi
+    podAnnotations: {}
+    podLabels: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    topologySpreadConstraints: []
+
+  resultprocessor:
+    enabled: false
+    replicaCount: 1
+    revisionHistoryLimit: 3
+    image:
+      repository: ghcr.io/skunkworq/uptime/resultprocessor
+      tag: ""
+      pullPolicy: IfNotPresent
+    containerPort: 8083
+    env:
+      nonSecret:
+        PORT: "8083"
+        SERVICE_NAME: telesis-resultprocessor
+        GO_ENV: production
+        ENV: production
+        GCP_PROJECT_ID: telesis-prod
+        PUBSUB_RESULT_SUBSCRIPTION_ID: check-results-sub
+        PUBSUB_MODE: pull
+        FRONTEND_BASE_URL: https://telesis.dev
+        RESEND_FROM_NAME: Telesis Alerts
+    secretEnv:
+      existingSecret: ""
+      optional: false
+    extraEnv: []
+    extraEnvFrom: []
+    firebaseAdmin:
+      enabled: true
+      existingSecret: ""
+      key: ""
+      mountPath: ""
+    probes:
+      enabled: true
+      readinessPath: /health/live
+      livenessPath: /health/live
+      startupPath: /health/live
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 6
+    service:
+      enabled: true
+      type: ClusterIP
+      port: 8083
+      annotations: {}
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    podAnnotations: {}
+    podLabels: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    topologySpreadConstraints: []
+
+  rollup:
+    enabled: false
+    replicaCount: 1
+    revisionHistoryLimit: 3
+    image:
+      repository: ghcr.io/skunkworq/uptime/rollup
+      tag: ""
+      pullPolicy: IfNotPresent
+    containerPort: 9505
+    env:
+      nonSecret:
+        PORT: "9505"
+        SERVICE_NAME: telesis-rollup
+        GO_ENV: production
+        ENV: production
+        ROLLUP_LOCAL_MODE: "true"
+        ROLLUP_HOURLY_INTERVAL: 1h
+        ROLLUP_DAILY_INTERVAL: 24h
+        RETENTION_DAYS: "30"
+        CLEANUP_BATCH_SIZE: "10000"
+    secretEnv:
+      existingSecret: ""
+      optional: false
+    extraEnv: []
+    extraEnvFrom: []
+    firebaseAdmin:
+      enabled: false
+      existingSecret: ""
+      key: ""
+      mountPath: ""
+    probes:
+      enabled: true
+      readinessPath: /health
+      livenessPath: /health
+      startupPath: /health
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 6
+    service:
+      enabled: true
+      type: ClusterIP
+      port: 9505
+      annotations: {}
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    podAnnotations: {}
+    podLabels: {}
+    nodeSelector: {}
+    tolerations: []
+    affinity: {}
+    topologySpreadConstraints: []

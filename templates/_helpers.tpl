@@ -42,3 +42,69 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
 {{- end -}}
 
+{{- define "telesis-api.componentName" -}}
+{{- default .component .componentValues.nameOverride | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{- define "telesis-api.componentFullname" -}}
+{{- if .componentValues.fullnameOverride -}}
+{{- .componentValues.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s" (include "telesis-api.fullname" .root) (include "telesis-api.componentName" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "telesis-api.componentSelectorLabels" -}}
+{{ include "telesis-api.selectorLabels" .root }}
+app.kubernetes.io/component: {{ include "telesis-api.componentName" . }}
+{{- end -}}
+
+{{- define "telesis-api.componentLabels" -}}
+{{ include "telesis-api.labels" .root }}
+app.kubernetes.io/component: {{ include "telesis-api.componentName" . }}
+{{- with .componentValues.labels }}
+{{ toYaml . }}
+{{- end }}
+{{- end -}}
+
+{{- define "telesis-api.componentSecretName" -}}
+{{- $name := "" -}}
+{{- with .componentValues.secretEnv -}}
+{{- $name = default "" .existingSecret -}}
+{{- end -}}
+{{- default .root.Values.secretEnv.existingSecret $name -}}
+{{- end -}}
+
+{{- define "telesis-api.componentSecretOptional" -}}
+{{- $optional := .root.Values.secretEnv.optional -}}
+{{- with .componentValues.secretEnv -}}
+{{- if hasKey . "optional" -}}
+{{- $optional = .optional -}}
+{{- end -}}
+{{- end -}}
+{{- $optional -}}
+{{- end -}}
+
+{{- define "telesis-api.componentFirebaseSecretName" -}}
+{{- $name := "" -}}
+{{- with .componentValues.firebaseAdmin -}}
+{{- $name = default "" .existingSecret -}}
+{{- end -}}
+{{- default .root.Values.firebaseAdmin.existingSecret $name -}}
+{{- end -}}
+
+{{- define "telesis-api.componentFirebaseKey" -}}
+{{- $key := "" -}}
+{{- with .componentValues.firebaseAdmin -}}
+{{- $key = default "" .key -}}
+{{- end -}}
+{{- default .root.Values.firebaseAdmin.key $key -}}
+{{- end -}}
+
+{{- define "telesis-api.componentFirebaseMountPath" -}}
+{{- $path := "" -}}
+{{- with .componentValues.firebaseAdmin -}}
+{{- $path = default "" .mountPath -}}
+{{- end -}}
+{{- default .root.Values.firebaseAdmin.mountPath $path -}}
+{{- end -}}

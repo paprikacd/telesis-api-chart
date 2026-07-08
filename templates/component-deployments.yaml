@@ -1,0 +1,151 @@
+{{- range $name, $component := .Values.components }}
+{{- if $component.enabled }}
+{{- $ctx := dict "root" $ "component" $name "componentValues" $component -}}
+{{- $componentFullname := include "telesis-api.componentFullname" $ctx -}}
+{{- $secretName := include "telesis-api.componentSecretName" $ctx -}}
+{{- $firebaseEnabled := and $component.firebaseAdmin $component.firebaseAdmin.enabled -}}
+{{- $firebaseSecretName := include "telesis-api.componentFirebaseSecretName" $ctx -}}
+{{- $firebaseKey := include "telesis-api.componentFirebaseKey" $ctx -}}
+{{- $firebaseMountPath := include "telesis-api.componentFirebaseMountPath" $ctx -}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $componentFullname }}
+  labels:
+    {{- include "telesis-api.componentLabels" $ctx | nindent 4 }}
+spec:
+  replicas: {{ default 1 $component.replicaCount }}
+  revisionHistoryLimit: {{ default $.Values.revisionHistoryLimit $component.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "telesis-api.componentSelectorLabels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "telesis-api.componentSelectorLabels" $ctx | nindent 8 }}
+        {{- with $component.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        checksum/config: {{ toYaml $component.env.nonSecret | sha256sum }}
+        {{- with $component.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "telesis-api.serviceAccountName" $ }}
+      automountServiceAccountToken: {{ $.Values.serviceAccount.automount }}
+      {{- with $.Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- default $.Values.podSecurityContext $component.podSecurityContext | toYaml | nindent 8 }}
+      containers:
+        - name: {{ include "telesis-api.componentName" $ctx }}
+          image: "{{ required (printf "components.%s.image.repository is required" $name) $component.image.repository }}:{{ default $.Values.image.tag $component.image.tag }}"
+          imagePullPolicy: {{ default $.Values.image.pullPolicy $component.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $component.containerPort }}
+              protocol: TCP
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: K_SERVICE
+              value: {{ $componentFullname | quote }}
+            - name: K_CONFIGURATION
+              value: {{ $componentFullname | quote }}
+            - name: K_REVISION
+              value: {{ default $.Values.image.tag $component.image.tag | quote }}
+            {{- if and $firebaseEnabled $firebaseSecretName }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: {{ $firebaseMountPath | quote }}
+            {{- end }}
+            {{- with $component.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          envFrom:
+            - configMapRef:
+                name: {{ $componentFullname }}
+            {{- if $secretName }}
+            - secretRef:
+                name: {{ $secretName }}
+                optional: {{ include "telesis-api.componentSecretOptional" $ctx }}
+            {{- end }}
+            {{- with $component.extraEnvFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if $component.probes.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ $component.probes.readinessPath | quote }}
+              port: http
+            initialDelaySeconds: {{ $component.probes.initialDelaySeconds }}
+            periodSeconds: {{ $component.probes.periodSeconds }}
+            timeoutSeconds: {{ $component.probes.timeoutSeconds }}
+            failureThreshold: {{ $component.probes.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: {{ $component.probes.livenessPath | quote }}
+              port: http
+            initialDelaySeconds: {{ $component.probes.initialDelaySeconds }}
+            periodSeconds: {{ $component.probes.periodSeconds }}
+            timeoutSeconds: {{ $component.probes.timeoutSeconds }}
+            failureThreshold: {{ $component.probes.failureThreshold }}
+          startupProbe:
+            httpGet:
+              path: {{ $component.probes.startupPath | quote }}
+              port: http
+            periodSeconds: {{ $component.probes.periodSeconds }}
+            timeoutSeconds: {{ $component.probes.timeoutSeconds }}
+            failureThreshold: {{ $component.probes.failureThreshold }}
+          {{- end }}
+          securityContext:
+            {{- default $.Values.securityContext $component.securityContext | toYaml | nindent 12 }}
+          resources:
+            {{- default $.Values.resources $component.resources | toYaml | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if and $firebaseEnabled $firebaseSecretName }}
+            - name: firebase-admin
+              mountPath: {{ $firebaseMountPath | quote }}
+              subPath: {{ $firebaseKey | quote }}
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if and $firebaseEnabled $firebaseSecretName }}
+        - name: firebase-admin
+          secret:
+            secretName: {{ $firebaseSecretName }}
+            items:
+              - key: {{ $firebaseKey | quote }}
+                path: {{ $firebaseKey | quote }}
+        {{- end }}
+      {{- with $component.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $component.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $component.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $component.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{ end }}
+{{ end }}

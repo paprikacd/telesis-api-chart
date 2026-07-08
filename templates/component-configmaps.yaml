@@ -1,0 +1,15 @@
+{{- range $name, $component := .Values.components }}
+{{- if $component.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "telesis-api.componentFullname" (dict "root" $ "component" $name "componentValues" $component) }}
+  labels:
+    {{- include "telesis-api.componentLabels" (dict "root" $ "component" $name "componentValues" $component) | nindent 4 }}
+data:
+  {{- range $key, $value := $component.env.nonSecret }}
+  {{ $key }}: {{ $value | toString | quote }}
+  {{- end }}
+{{ end }}
+{{ end }}
