@@ -29,6 +29,9 @@ spec:
         {{- end }}
       annotations:
         checksum/config: {{ toYaml $component.env.nonSecret | sha256sum }}
+        {{- if $.Values.workloadIdentity.enabled }}
+        checksum/workload-identity: {{ include (print $.Template.BasePath "/workloadidentity-configmap.yaml") $ | sha256sum }}
+        {{- end }}
         {{- with $component.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -64,7 +67,10 @@ spec:
               value: {{ $componentFullname | quote }}
             - name: K_REVISION
               value: {{ default $.Values.image.tag $component.image.tag | quote }}
-            {{- if and $firebaseEnabled $firebaseSecretName }}
+            {{- if $.Values.workloadIdentity.enabled }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: {{ printf "%s/%s" $.Values.workloadIdentity.credentialConfigMountPath $.Values.workloadIdentity.credentialConfigFile | quote }}
+            {{- else if and $firebaseEnabled $firebaseSecretName }}
             - name: GOOGLE_APPLICATION_CREDENTIALS
               value: {{ $firebaseMountPath | quote }}
             {{- end }}
@@ -114,7 +120,14 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
-            {{- if and $firebaseEnabled $firebaseSecretName }}
+            {{- if $.Values.workloadIdentity.enabled }}
+            - name: gcp-workload-identity-credentials
+              mountPath: {{ $.Values.workloadIdentity.credentialConfigMountPath | quote }}
+              readOnly: true
+            - name: gcp-workload-identity-token
+              mountPath: {{ $.Values.workloadIdentity.tokenMountPath | quote }}
+              readOnly: true
+            {{- else if and $firebaseEnabled $firebaseSecretName }}
             - name: firebase-admin
               mountPath: {{ $firebaseMountPath | quote }}
               subPath: {{ $firebaseKey | quote }}
@@ -123,7 +136,26 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
-        {{- if and $firebaseEnabled $firebaseSecretName }}
+        {{- if $.Values.workloadIdentity.enabled }}
+        {{- $wi := $.Values.workloadIdentity }}
+        {{- $projectNumber := required "workloadIdentity.projectNumber is required when workloadIdentity.enabled=true" $wi.projectNumber }}
+        {{- $pool := required "workloadIdentity.pool is required when workloadIdentity.enabled=true" $wi.pool }}
+        {{- $provider := required "workloadIdentity.provider is required when workloadIdentity.enabled=true" $wi.provider }}
+        {{- $tokenAudience := default (printf "//iam.googleapis.com/projects/%s/locations/global/workloadIdentityPools/%s/providers/%s" (toString $projectNumber) $pool $provider) $wi.tokenAudience }}
+        - name: gcp-workload-identity-credentials
+          configMap:
+            name: {{ include "telesis-api.fullname" $ }}-workload-identity
+            items:
+              - key: {{ $wi.credentialConfigFile | quote }}
+                path: {{ $wi.credentialConfigFile | quote }}
+        - name: gcp-workload-identity-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  audience: {{ $tokenAudience | quote }}
+                  expirationSeconds: {{ $wi.tokenExpirationSeconds }}
+                  path: {{ $wi.tokenFile | quote }}
+        {{- else if and $firebaseEnabled $firebaseSecretName }}
         - name: firebase-admin
           secret:
             secretName: {{ $firebaseSecretName }}

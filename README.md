@@ -11,8 +11,10 @@ Standalone Helm chart for the Telesis API origin managed by Paprika.
 - Rollup image: `australia-southeast1-docker.pkg.dev/uptime-485903/uptime-prod-docker/rollup:78fc26c`
 - Pull secret: `telesis-gar`
 - Runtime secret: `telesis-api-env`
-- Firebase admin secret: `telesis-firebase-admin`
+- Google Cloud credentials: keyless ADC through `workloadIdentity.enabled=true`
 - Default service port: `9500`
+
+`firebaseAdmin.existingSecret` remains as a fallback for local or break-glass JSON-key mounting only.
 
 ## Validate
 

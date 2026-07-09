@@ -1,0 +1,30 @@
+{{- if .Values.workloadIdentity.enabled }}
+{{- $wi := .Values.workloadIdentity -}}
+{{- $projectNumber := required "workloadIdentity.projectNumber is required when workloadIdentity.enabled=true" $wi.projectNumber -}}
+{{- $pool := required "workloadIdentity.pool is required when workloadIdentity.enabled=true" $wi.pool -}}
+{{- $provider := required "workloadIdentity.provider is required when workloadIdentity.enabled=true" $wi.provider -}}
+{{- $audience := default (printf "//iam.googleapis.com/projects/%s/locations/global/workloadIdentityPools/%s/providers/%s" (toString $projectNumber) $pool $provider) $wi.audience -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "telesis-api.fullname" . }}-workload-identity
+  labels:
+    {{- include "telesis-api.labels" . | nindent 4 }}
+data:
+  {{ $wi.credentialConfigFile }}: |
+    {
+      "type": "external_account",
+      "audience": {{ $audience | quote }},
+      "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+      "token_url": "https://sts.googleapis.com/v1/token",
+      {{- if $wi.serviceAccountEmail }}
+      "service_account_impersonation_url": "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/{{ $wi.serviceAccountEmail }}:generateAccessToken",
+      {{- end }}
+      "credential_source": {
+        "file": "{{ $wi.tokenMountPath }}/{{ $wi.tokenFile }}",
+        "format": {
+          "type": "text"
+        }
+      }
+    }
+{{- end }}

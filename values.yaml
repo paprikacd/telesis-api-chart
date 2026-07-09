@@ -74,6 +74,20 @@ firebaseAdmin:
   key: firebase-admin-key.json
   mountPath: /etc/telesis/firebase-admin-key.json
 
+workloadIdentity:
+  enabled: false
+  projectNumber: ""
+  pool: vke-omega
+  provider: omega
+  audience: ""
+  tokenAudience: ""
+  tokenExpirationSeconds: 3600
+  serviceAccountEmail: ""
+  credentialConfigMountPath: /var/run/secrets/google/workload-identity
+  credentialConfigFile: credential-configuration.json
+  tokenMountPath: /var/run/secrets/google/tokens
+  tokenFile: token
+
 probes:
   enabled: true
   readinessPath: /health/ready
