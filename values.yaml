@@ -8,7 +8,7 @@ commonLabels:
 
 image:
   repository: australia-southeast1-docker.pkg.dev/uptime-485903/uptime-prod-docker/api
-  tag: ab2d5b3
+  tag: 65e5ce5
   pullPolicy: IfNotPresent
 
 imagePullSecrets:
@@ -145,8 +145,8 @@ components:
     replicaCount: 1
     revisionHistoryLimit: 3
     image:
-      repository: ghcr.io/skunkworq/uptime/scheduler
-      tag: ""
+      repository: australia-southeast1-docker.pkg.dev/uptime-485903/uptime-prod-docker/scheduler
+      tag: ab2d5b3
       pullPolicy: IfNotPresent
     containerPort: 8081
     env:
@@ -202,8 +202,8 @@ components:
     replicaCount: 1
     revisionHistoryLimit: 3
     image:
-      repository: ghcr.io/skunkworq/uptime/runner
-      tag: ""
+      repository: australia-southeast1-docker.pkg.dev/uptime-485903/uptime-prod-docker/runner
+      tag: ab2d5b3
       pullPolicy: IfNotPresent
     containerPort: 8082
     env:
@@ -261,8 +261,8 @@ components:
     replicaCount: 1
     revisionHistoryLimit: 3
     image:
-      repository: ghcr.io/skunkworq/uptime/resultprocessor
-      tag: ""
+      repository: australia-southeast1-docker.pkg.dev/uptime-485903/uptime-prod-docker/resultprocessor
+      tag: ab2d5b3
       pullPolicy: IfNotPresent
     containerPort: 8083
     env:
@@ -319,8 +319,8 @@ components:
     replicaCount: 1
     revisionHistoryLimit: 3
     image:
-      repository: ghcr.io/skunkworq/uptime/rollup
-      tag: ""
+      repository: australia-southeast1-docker.pkg.dev/uptime-485903/uptime-prod-docker/rollup
+      tag: 78fc26c
       pullPolicy: IfNotPresent
     containerPort: 9505
     env:
