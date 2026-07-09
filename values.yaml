@@ -332,7 +332,7 @@ components:
         ROLLUP_LOCAL_MODE: "true"
         ROLLUP_HOURLY_INTERVAL: 1h
         ROLLUP_DAILY_INTERVAL: 24h
-        RETENTION_DAYS: "30"
+        RETENTION_DAYS: "7"
         CLEANUP_BATCH_SIZE: "10000"
     secretEnv:
       existingSecret: ""
